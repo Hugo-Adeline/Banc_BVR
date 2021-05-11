@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Installation
+Exec=sh /media/pi/BANCBVR/install.sh
+Icon=/usr/share/icons/Adwaita/96x96/apps/system-software-install-symbolic.symbolic.png
+Terminal=true
