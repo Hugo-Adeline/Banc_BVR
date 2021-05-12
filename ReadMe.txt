@@ -1,6 +1,6 @@
-1.a) - Vérifiez que le nom de la clé USB est "BANCBVR", sinon formatez la.
+﻿1.a) - Vérifiez que le nom de la clé USB est "BANCBVR", sinon formatez la.
 
-  b) - Copiez l'intégralité des ficheir à la racine de la clé USB
+  b) - Copiez l'intégralité des fichiers à la racine de la clé USB
 
 2.a) - Brancher la raspberry à l'alimentation ET au réseau via un câble ethernet
 
