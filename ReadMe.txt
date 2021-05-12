@@ -9,6 +9,3 @@
   c) - Lancer install.desktop
 
   d) - Lorsque les modules ont fini de s'installer, la raspberry redémarre et le banc est prêt.
-
-Test
-
