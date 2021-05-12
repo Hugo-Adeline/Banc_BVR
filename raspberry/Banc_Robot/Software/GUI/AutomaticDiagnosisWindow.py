@@ -138,6 +138,7 @@ class AutomaticDiagnosisWindow():
             pressureActuator = self.root.interface.actuatorClass['Electro_pompe']['Robot']
 
             self.diagConsole.insert('end', "[AutoDiag] : Abaissement de la pression au minimum...")
+            # La fonction d'abaissement de pression permet de vérifier la pression minimale
             validation = LowerPressure(self)
             if validation == False:
                 self.diagConsole.insert('end', "[Erreur] : Impossible de baisser la pression via les actionneurs.")
@@ -148,6 +149,7 @@ class AutomaticDiagnosisWindow():
                 self.Stop()
                 return
 
+            # On utilise la variable Time + 1sec pour tester si la pompe atteint le max
             initPressure = pressureSensor.Poll()
             print(initPressure)
             self.diagConsole.insert('end', "[AutoDiag] : Test de la pompe...")
@@ -163,15 +165,7 @@ class AutomaticDiagnosisWindow():
                 self.diagConsole.insert('end', "[AutoDiag] : Le système de pression fonctionne.")
                 self.diagConsole.itemconfig('end', fg= 'green')
             else:
-                """
-                for actSubCategory in self.robotAttributes['Actuators']['Electrovanne']:
-                    subCategory = actSubCategory.rstrip('+- ')
-                    positionSensor = self.root.interface.sensorClass['Position'][subCategory + ' 1']
-                    actuatorUp = self.root.interface.actuatorClass['Electrovanne'][subCategory + ' +']
-                    if subCategory != 'Embrayage':
-                        actuatorDown = self.root.interface.actuatorClass['Electrovanne'][subCategory + ' -']
-                    devSensor = self.robotAttributes['Sensors']['Position'][subCategory + ' 1']['Deviation']
-                """
+                # Emplacement du test pour vérifier si la pompe fonctionne mais pas le capteur
                 self.diagConsole.insert('end', "[Erreur] : Le capteur de pression ou la pompe est défaillant(e).")
                 self.diagConsole.itemconfig('end', fg= 'red')
                 self.sensorErrDict['Pression']['Robot'].append('Capteur défaillant')
@@ -212,27 +206,33 @@ class AutomaticDiagnosisWindow():
         return
 
     def Stop(self):
+
+        # Affichage du nombre d'erreur avec un code couleur approrié
         self.diagConsole.insert('end', "[AutoDiag] : Le diagnostique a trouvé " + str(self.errCount) + " erreurs.")
         if self.errCount == 0:
             self.diagConsole.itemconfig('end', fg= 'green')
-        elif self.errCount <= 2:
+        elif self.errCount == 1:
             self.diagConsole.itemconfig('end', fg= 'orange')
-        elif self.errCount > 2:
+        elif self.errCount > 1:
             self.diagConsole.itemconfig('end', fg= 'red')
 
         self.diagConsole.insert('end', "[AutoDiag] : Le diagnostique est terminé.")
+
+        self.diagConsole.insert('end', "[AutoDiag] : Création du résumé du diagnostique...")
 
         for category in self.sensorErrDict:
             for subCategory in self.sensorErrDict[category]:
                 errors = self.sensorErrDict[category][subCategory]
                 if errors != []:
                     for error in errors:
+                        self.diagConsole.insert('end', "[Conclusion] (" + category + ' ' + subCategory + ") : " + error)
                         print('[Conclusion] (' + category + ' ' + subCategory + ') : ' + error)
         for category in self.actuatorErrDict:
             for subCategory in self.actuatorErrDict[category]:
                 errors = self.actuatorErrDict[category][subCategory]
                 if errors != []:
                     for error in errors:
+                        self.diagConsole.insert('end', "[Conclusion] (" + category + ' ' + subCategory + ") : " + error)
                         print('[Conclusion] (' + category + ' ' + subCategory + ') : ' + error)
 
         self.buttonRelancer.config(state= 'normal')
