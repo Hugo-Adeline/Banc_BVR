@@ -259,7 +259,8 @@ class CalibrationWindow():
                 self.actuatorEntryVarList.append(actuatorVarList)
 
     def AutomaticCalibration(self):
-        validation = Popup(self, 2, texte= "Procéder à la calibration automatique ?", valider= "Oui", fermer= "Non")
+        # Lancement de la calibration automatique après popup de vérification
+        validation = Popup(self, 2, texte= "ATTENTION: Le processus de calibration ne peut pas être interrompu.", valider= "Continuer", fermer= "Annuler")
         if validation == False:
             return
         validation = AutoCalib(self)
