@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Banc d'essais
-Exec=lxterminal -e '/home/pi/Python-3.9.1/python /home/pi/Banc_Robot/Software/Main.py'
+Exec=lxterminal -e 'python /home/pi/Banc_Robot/Software/Main.py'
 Icon=/home/pi/Banc_Robot/Software/GUI/Images/Icones/BVR.gif
 Terminal=true

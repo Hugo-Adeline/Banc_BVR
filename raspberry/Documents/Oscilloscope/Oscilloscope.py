@@ -33,6 +33,8 @@ class DynamicUpdate():
 		#Paramétrage des GPIO
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
+		GPIO.setup(14,GPIO.OUT)
+		GPIO.output(14,GPIO.HIGH)
 
 	def on_running(self, xdata1, ydata1, xdata2, ydata2):
 		#Rafraichissement des données de courbes
@@ -69,11 +71,11 @@ class DynamicUpdate():
 	def refreshValues(self):
 		#Acquisition des valeurs pour le channel 1 et 2
 		while True:
-			value = self.mcp.read_adc(0)*3.3/1024
+			value = self.mcp.read_adc(0)*5/1024
 			temps = time() - d.t0
 			d.xdata1.append(temps)
 			d.ydata1.append(value)
-			value = self.mcp.read_adc(7)*3.3/1024
+			value = self.mcp.read_adc(0)*5/1024
 			temps = time() - d.t0
 			d.xdata2.append(temps)
 			d.ydata2.append(value)

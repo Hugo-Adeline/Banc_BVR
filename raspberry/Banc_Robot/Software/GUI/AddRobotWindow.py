@@ -63,7 +63,7 @@ class AddRobotWindow():
         self.label.config(font = self.root.fontButton, anchor= 'w', width = 30, bg= self.root.defaultbg)
         self.label.grid(column = 1, row = 0, columnspan= 2, sticky= 'w')
 
-        self.label = tk.Label(self.centerSubFrame, text="Détails des capteurs")
+        self.label = tk.Label(self.centerSubFrame, text="Détail des capteurs")
         self.label.config(font = self.root.fontButton, width = 20, anchor= 'w', bg= self.root.defaultbg)
         self.label.grid(column = 3, row = 0, columnspan= 2, sticky= 'w')
 
@@ -208,6 +208,7 @@ class AddRobotWindow():
                                                          self.sensorSubOMVarList[i],
                                                          *self.root.interface.sensorDict[key]))
                 self.sensorSubOMList[i].config(font = self.root.fontLabel, bg= 'white', activebackground= 'white', relief= 'sunken', highlightbackground= self.root.defaultbg)
+                self.sensorSubOMList[i]['menu'].config(bg= 'white', font= self.root.fontLabel)
                 self.sensorSubOMList[i].grid(column= 5, row= i+1, sticky= 'w')
 
 
@@ -277,6 +278,7 @@ class AddRobotWindow():
                                                          self.actuatorSubOMVarList[i],
                                                          *self.root.interface.actuatorDict[key]))
                 self.actuatorSubOMList[i].config(font = self.root.fontLabel, bg= 'white', activebackground= 'white', relief= 'sunken', highlightbackground= self.root.defaultbg)
+                self.actuatorSubOMList[i]['menu'].config(bg= 'white', font= self.root.fontLabel)
                 self.actuatorSubOMList[i].grid(column= 8, row= i+1, sticky= 'w')
 
 

@@ -4,7 +4,7 @@ from time import time
 
 class Actuator():
     def __init__(self, category, subCategory, pin, interface):
-        
+
         # Définition du capteur
         self.category = category
         self.subCategory = subCategory
@@ -12,15 +12,15 @@ class Actuator():
         self.pin = pin [1]
         self.interface = interface
         self.position = 0
-        
+
     def GetdBValues(self, numberOfGear= 2):
-        
+
         # Création des valeurs associées aux capteur en fonction du type
         return {'Time': None}
-    
-    
+
+
     def GetOverrideData(self):
-        
+
         # Création des flèches de direction pour les buttons de contrôle
         if '+' in self.subCategory:
             column = 5
@@ -33,13 +33,20 @@ class Actuator():
             text ='▲'
         else:
             return None
-            
+
         return column, text
 
-    def Set(self, time= 0.5, state= None):
+    def Set(self, time= 0.5, state= None, actuatorType= None):
         # On envoie un signal à l'actionneur
         if state != None:
             return self.interface.Set(self.pin, state)
+        if actuatorType == 'S-Shaft':
+            if self.position == 0:
+                self.position = 1
+                return self.interface.Set(self.pin, 1)
+            elif self.position == 1:
+                self.position = 0
+                return self.interface.Set(self.pin, 0)
         elif self.subCategory == 'Sélection +':
             if self.interface.actuatorClass[self.category]['Sélection -'].position == 1:
                 self.interface.actuatorClass[self.category]['Sélection -'].position = 0
@@ -60,7 +67,7 @@ class Actuator():
                 return
         else:
             return self.interface.SetTime(self.pin, time)
-            
+
     def GetTime(self, robotAttributes):
         if self.category != "Electro_pompe":
             return None
@@ -73,5 +80,3 @@ class Actuator():
         t1 = time()
         self.Set(state= 0)
         return round(t1 - t0, 1)
-            
-        

@@ -14,6 +14,7 @@ class CalibrationWindow():
         self.masterFrame = tk.Frame(self.root, bg= self.root.defaultbg)
 
         # Déclaration des variables
+        self.title = tk.StringVar()
         self.robotSelected = tk.StringVar()
         self.robotAttributes = {}
         self.sensorDict = {}
@@ -63,7 +64,8 @@ class CalibrationWindow():
         self.typeRobot.set(self.robotAttributes['Type'])
 
         # Création des boutons et labels fixes
-        self.label = tk.Label(self.titleFrame, text=("Calibration du robot: "+self.robotSelected.get()))
+        self.title.set("Calibration du robot: "+self.robotSelected.get())
+        self.label = tk.Label(self.titleFrame, textvariable= self.title)
         self.label.config(font = self.root.fontTitle, bg= self.root.defaultbg)
         self.label.pack(pady = self.root.titlePadY)
 
@@ -137,6 +139,7 @@ class CalibrationWindow():
         # Rafraichissement de la robot sélectionnée dans le menu déroulant sur la page de de maintenance
         self.robotSelected = self.root.maintenanceWindow.robotSelected
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
+        self.title.set("Calibration du robot: "+self.robotSelected.get())
 
 
     def Refresh(self):
