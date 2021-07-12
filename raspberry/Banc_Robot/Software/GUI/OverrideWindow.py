@@ -48,10 +48,6 @@ class OverrideWindow():
         label.config(font = self.root.fontTitle)
         label.pack(pady = self.root.titlePadY)
 
-        button = tk.Button(self.masterFrame, text= "TEST", command= self.TEST)
-        button.config(font = self.root.fontButton)
-        button.place(relx= 0.5, rely= self.root.retourRelY)
-
         button = tk.Button(self.masterFrame, text= "Retour", command= self.Close)
         button.config(font = self.root.fontButton)
         button.place(relx= self.root.retourRelX, rely= self.root.retourRelY)
@@ -77,7 +73,7 @@ class OverrideWindow():
 
         # Rafraichissement du robot sélectionné
         self.robotSelected = self.root.mainMenuWindow.robotSelected
-        self.titre.set("Diagnostique manuel avancé du robot " + str(self.robotSelected.get()))
+        self.titre.set("Diagnostic manuel du robot " + str(self.robotSelected.get()))
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
 
         # Destruction de l'ancienne interface
@@ -114,7 +110,7 @@ class OverrideWindow():
 
         for category in self.robotAttributes['Sensors']:
             for subCategory in self.robotAttributes['Sensors'][category]:
-                key = category + subCategory.rstrip(' 0123456789')
+                key = category + ' ' + subCategory.rstrip(' 0123456789')
                 try:
                     type(self.sensorLabelDict[key]) == list()
                 except:
@@ -146,7 +142,16 @@ class OverrideWindow():
                     if subType in key:
                         if self.root.interface.actuatorClass[category][subCategory].GetOverrideData() != None:
                             column, text = self.root.interface.actuatorClass[category][subCategory].GetOverrideData()
-                            self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= self.root.interface.actuatorClass[category][subCategory].Set)
+                            try:
+                                sensor = self.robotAttributes['Sensors']['Position'][subCategory.rstrip('+-') + '1']
+                                if sensor['ActuatorType'] == 'S-Shaft':
+                                    sCat= category
+                                    sSubCat = subCategory
+                                    self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= lambda : self.root.interface.actuatorClass[sCat][sSubCat].Set(actuatorType= 'S-Shaft'))
+                                else:
+                                    self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= self.root.interface.actuatorClass[category][subCategory].Set)
+                            except:
+                                self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= self.root.interface.actuatorClass[category][subCategory].Set)
                             self.actuatorButtonDict[category + ' ' + subCategory].config(width = 6, height = 3, bg= 'lightgrey')
                             self.actuatorButtonDict[category + ' ' + subCategory].grid(column= column, row = rowActuator, rowspan= len(self.sensorLabelDict[key]))
 
@@ -171,7 +176,8 @@ class OverrideWindow():
                 self.sensorMinMaxDict[category + ' ' + subCategory] = (sensor['Min'], sensor['Max'])
 
 
-    def SetAnimationPos(self, label, pos):
+    def SetAnimationPos(self, label, pos, key):
+        key = key.rstrip(" 0123456789")
         pos = pos * label['Filepath']['Nominale']
         pos = trunc(pos)
         if label['ImageNumber'] != None:
@@ -184,10 +190,16 @@ class OverrideWindow():
         label['ImageNumber'] = pos
         if pos > 10:
             imageActuator = Image.open(label['Filepath']["ErrHigh"])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'red')
         elif pos < 0:
             imageActuator = Image.open(label['Filepath']["ErrLow"])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'red')
         else:
             imageActuator = Image.open(label['Filepath'][pos])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'black')
         label['Image'] = ImageTk.PhotoImage(imageActuator)
         label['Label'].config(image= label['Image'], bg= self.root.defaultbg)
         label['Label'].grid(column= 4, row= label['Row'], rowspan= label['Rowspan'], sticky= 'w')
@@ -213,6 +225,13 @@ class OverrideWindow():
                         normValue = 0
                     else:
                         normValue = (value - minValue)/(maxValue - minValue)
-                    self.SetAnimationPos(self.animatedLabelDict[key], normValue)
+                    self.SetAnimationPos(self.animatedLabelDict[key], normValue, key2)
+
+                for category in self.robotAttributes['Actuators']:
+                    for subCategory in self.robotAttributes['Actuators'][category]:
+                        if self.root.interface.actuatorClass[category][subCategory].position == 1:
+                            self.actuatorButtonDict[category + ' ' + subCategory].config(bg= 'green', activebackground= 'lightgreen')
+                        else:
+                            self.actuatorButtonDict[category + ' ' + subCategory].config(bg= 'lightgrey', activebackground= self.root.defaultbg)
             except:
                 None

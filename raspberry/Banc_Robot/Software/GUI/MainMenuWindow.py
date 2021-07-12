@@ -38,7 +38,7 @@ class MainMenuWindow():
 
         self.label = tk.LabelFrame(self.centerSubFrame, text= 'Menu Principal')
 
-        self.label = tk.Label(self.centerSubFrame, text="Sélectionnez le modèle du robot et le type de diagnostique:")
+        self.label = tk.Label(self.centerSubFrame, text="Sélectionnez le modèle du robot et le type de diagnostic:")
         self.label.config(font = self.root.fontLabel, bg= self.root.defaultbg)
         self.label.pack()
 
@@ -46,21 +46,17 @@ class MainMenuWindow():
         self.om.config(font = self.root.fontButton, bg= 'white', activebackground= 'white', relief= 'sunken', highlightbackground= self.root.defaultbg)
         self.om.pack(pady = 8)
 
-        self.button = tk.Button(self.centerSubFrame, text="Diagnostique automatique", command= self.root.automaticDiagnosisWindow.Open)
+        self.button = tk.Button(self.centerSubFrame, text="Diagnostic automatique", command= self.root.automaticDiagnosisWindow.Open)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
         self.button.pack(pady = 2)
 
-        self.button = tk.Button(self.centerSubFrame, text="Diagnostique manuel", command= self.root.manualDiagnosisWindow.Open)
+        self.button = tk.Button(self.centerSubFrame, text="Diagnostic manuel", command= self.root.overrideWindow.Open)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
         self.button.pack()
 
-        self.button = tk.Button(self.centerSubFrame, text="Diagnostique manuel avancé", command= self.root.overrideWindow.Open)
-        self.button.config(font = self.root.fontButton, bg= 'lightgrey')
-        self.button.pack(pady = 2)
-
         self.button = tk.Button(self.masterFrame, text="Gestion base de données", command= self.root.maintenanceWindow.Open)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
-        self.button.place(relx= 0.75,rely= 0.2)
+        self.button.place(relx= 0.75, rely= 0.2)
 
         self.button = tk.Button(self.masterFrame, text="Arrêter", command= self.Close)
         self.button.config(font = self.root.fontButton, bg = 'lightgrey')

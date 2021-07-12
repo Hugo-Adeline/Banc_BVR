@@ -1,4 +1,4 @@
 [Desktop Entry]
 Type=Application
 Name=Banc_Robot
-Exec=/home/pi/Python-3.9.1/python /home/pi/Banc_Robot/Autorun.py
+Exec=python /home/pi/Banc_Robot/Autorun.py

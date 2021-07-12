@@ -57,9 +57,9 @@ class ManualDiagnosisWindow():
 
     def Setup(self):
 
-        # Récupération de la robot sélectionnée pour le diagnostique
+        # Récupération de la robot sélectionnée pour le diagnostic
         self.robotSelected = self.root.mainMenuWindow.robotSelected
-        self.titre.set("Diagnostique manuel du robot " + str(self.robotSelected.get()))
+        self.titre.set("Diagnostic manuel du robot " + str(self.robotSelected.get()))
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
 
         # Création des boutons et labels fixes
@@ -179,7 +179,7 @@ class ManualDiagnosisWindow():
 
         # Rafraichissement du robot sélectionné
         self.robotSelected = self.root.mainMenuWindow.robotSelected
-        self.titre.set("Diagnostique manuel du robot " + str(self.robotSelected.get()))
+        self.titre.set("Diagnostic manuel du robot " + str(self.robotSelected.get()))
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
 
         # Changement de l'image

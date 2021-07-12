@@ -36,16 +36,14 @@ class RaspberryInterface():
                         "Position Embrayage 1": ('A', 4), "Position Embrayage 2": ('A', 5),
                         "Pression Robot": ('A', 6),
                         "Vitesse Boîte de vitesses": ('A', 7),
-                        "Electrovanne Sélection +": ('D', 13), "Electrovanne Sélection -": ('D', 14),
-                        "Electrovanne Engagement +": ('D', 21), "Electrovanne Engagement -": ('D', 22),
-                        "Electrovanne Embrayage +": ('D', 15),
-                        "Moteur_électrique Sélection +": ('D', 13), "Moteur_électrique Sélection -": ('D', 14),
-                        "Moteur_électrique Engagement +": ('D', 21), "Moteur_électrique Engagement -": ('D', 22),
-                        "Moteur_électrique Embrayage +": ('D', 15),
-                        "Electro_pompe Robot": ('D', 16),
-                        "Extra Extra 1": ('D', 26), "Extra Extra 2": ('D', 27)}
-
-        self.GPIOReset()
+                        "Electrovanne Sélection +": ('D', 17), "Electrovanne Sélection -": ('D', 4),
+                        "Electrovanne Engagement +": ('D', 5), "Electrovanne Engagement -": ('D', 6),
+                        "Electrovanne Embrayage +": ('D', 27),
+                        "Moteur_électrique Sélection +": ('D', 17), "Moteur_électrique Sélection -": ('D', 4),
+                        "Moteur_électrique Engagement +": ('D', 5), "Moteur_électrique Engagement -": ('D', 6),
+                        "Moteur_électrique Embrayage +": ('D', 27),
+                        "Electro_pompe Robot": ('D', 22),
+                        "Extra Extra 1": ('D', 13), "Extra Extra 2": ('D', 26)}
 
         # Création de la liste des types
         self.sensorList = []
@@ -73,6 +71,8 @@ class RaspberryInterface():
             for subCategory in self.sensorDict[category]:
                 self.sensorValue[category + ' ' + subCategory] = 0
 
+        self.GPIOReset()
+
         _thread.start_new_thread(self.SensorThread, ())
 
 
@@ -81,13 +81,18 @@ class RaspberryInterface():
             if self.pinDict[key][0] == 'D':
                 GPIO.setup(self.pinDict[key][1], GPIO.OUT)
                 self.Set(self.pinDict[key][1], GPIO.LOW)
+        for category in self.actuatorClass:
+            for subCategory in self.actuatorClass[category]:
+                self.actuatorClass[category][subCategory].position = 0
+        GPIO.setup(14, GPIO.OUT)
+        self.Set(14, GPIO.HIGH)
 
 
     def SensorThread(self):
         while True:
             for category in self.sensorClass:
                 for subCategory in self.sensorClass[category]:
-                    self.sensorValue[category + ' ' + subCategory] = self.sensorClass[category][subCategory].Poll()
+                    self.sensorValue[category + ' ' + subCategory] = self.sensorClass[category][subCategory].Poll(250)
 
 
     def Poll(self, pinType, pin, averaging):
@@ -95,7 +100,7 @@ class RaspberryInterface():
             value = 0
             for i in range(averaging):
                 value += self.mcp.read_adc(pin)
-            value = str(round(value / 1024 * 3.3 / averaging, 2))
+            value = str(round(value / 1024 * 5 / averaging, 2))
         elif pinType == 'D':
             value = 0
         return value

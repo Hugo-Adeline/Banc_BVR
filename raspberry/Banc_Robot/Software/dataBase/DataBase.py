@@ -18,7 +18,7 @@ class DataBase():
         # Création de l'entête
         self.header = ['Dictionnary']
 
-        # Vérification de l'existence de la base de donnée
+        # Vérification de l'existence de la base de données
         if os.path.isfile(path):
             self.Backup()
             return
