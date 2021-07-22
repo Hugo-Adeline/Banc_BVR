@@ -24,6 +24,7 @@ def Popup(self, popupType, titre= "Attention", texte= "Erreur", fermer= "Fermer"
     popup.title(titre)
     popup.transient(self.root)
     popup.attributes('-topmost', 'true')
+    popup.wait_visibility()
     popup.grab_set()
     popup.resizable(False, False)
     icon = tk.PhotoImage(file= self.root.imageDict['Warning'])
