@@ -34,6 +34,7 @@ class CalibrationWindow():
         self.centerFrame = tk.Frame(self.masterFrame, relief= 'groove', bd = 3, bg= self.root.defaultbg)
         self.centerCanvas = tk.Canvas(self.centerFrame, bg= self.root.defaultbg)
         self.centerSubFrame = tk.Frame(self.centerCanvas, bg= self.root.defaultbg)
+        self.centerSubFrameBis = tk.Frame(self.masterFrame, relief= 'groove', bd= 1, bg= 'white')
 
         # Placement des cadres
         self.titleFrame.pack(side= 'top')
@@ -116,6 +117,10 @@ class CalibrationWindow():
         self.button = tk.Button(self.masterFrame, text="Retour", command= self.Close)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
         self.button.place(relx= self.root.retourRelX, rely= self.root.retourRelY)
+
+        # Création de la console
+        self.diagConsole = tk.Listbox(self.centerSubFrameBis, bg= 'white', width= 75, height= 38)
+        self.diagConsole.pack()
 
 
     def Open(self):
@@ -269,7 +274,7 @@ class CalibrationWindow():
         validation = AutoCalib(self)
         if validation == True:
             self.Refresh()
-            Popup(self, 1, texte= "La calibration automatique a été effectuée.")
+            Popup(self, 1, texte= "La calibration automatique a été effectuée, vous pouvez rebrancher les capteurs.")
         else:
             Popup(self, 1, texte= "Il y a eu une erreur lors de la calibration.")
 

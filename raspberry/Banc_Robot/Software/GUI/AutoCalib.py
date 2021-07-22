@@ -7,12 +7,22 @@ from GUI.GUI_utils import Popup
 def AutoCalib(self):
 
     # On demande de vérifier le branchement des capteurs
+    self.centerFrame.place_forget()
+    self.centerSubFrameBis.pack(side= 'top', pady= 100)
+
+    self.diagConsole.insert('end', "[AutoCalib] : Initialisation de la calibration automatique pour le robot: " + self.robotAttributes['Name'] + '...')
+    self.root.update()
+
     Popup(self, 1, texte= "Assurez vous que tous les capteurs sont branchés avant de continuer.", fermer= 'Continuer')
+    self.root.update()
 
     # On éteint les relais
     self.root.interface.GPIOReset()
 
     # Récupération de la déviation des capteurs branchés
+    self.diagConsole.insert('end', "[AutoCalib] : Récupération de la déviation nominale des capteurs...")
+    self.root.update()
+
     for category in self.robotAttributes['Sensors']:
         for subCategory in self.robotAttributes['Sensors'][category]:
             tempList = []
@@ -28,7 +38,14 @@ def AutoCalib(self):
             else:
                 self.robotAttributes['Sensors'][category][subCategory]['Deviation'] = round(variance**(0.5), 2)
 
+    self.diagConsole.insert('end', "[AutoCalib] : Déviation nominale des capteurs enregistrée.")
+    self.diagConsole.itemconfig('end', fg= 'green')
+    self.root.update()
+
     # Calibration du système de pression
+    self.diagConsole.insert('end', "[AutoCalib] : Initialisation de la calibration du système de pression...")
+    self.root.update()
+
     pressureSensor = self.root.interface.sensorClass['Pression']['Robot']
     pressureActuator = self.root.interface.actuatorClass['Electro_pompe']['Robot']
     evDict = self.robotAttributes['Actuators']['Electrovanne']
@@ -37,16 +54,28 @@ def AutoCalib(self):
     	evClassList.append(self.root.interface.actuatorClass['Electrovanne'][subCategory])
 
     # Vidage de la pression
+    self.diagConsole.insert('end', "[AutoCalib] : Diminution de la pression...")
+    self.root.update()
+
     for i in range(5):
         for ev in evClassList:
             ev.Set(state= 1)
             sleep(0.5)
             ev.Set(state= 0)
             sleep(0.25)
+
     # Sauvegarde de la pression minimale
     self.robotAttributes['Sensors']['Pression']['Robot']['Min'] = pressureSensor.Poll(100)
     minPressure = self.robotAttributes['Sensors']['Pression']['Robot']['Min']
+
+    self.diagConsole.insert('end', "[AutoCalib] : Pression minimale atteinte à " + str(minPressure) + "V .")
+    self.diagConsole.itemconfig('end', fg= 'green')
+    self.root.update()
+
     # Détermination de la pression maximale et minimale
+    self.diagConsole.insert('end', "[AutoCalib] : Détermination de la pression maximale...")
+    self.root.update()
+
     timer = 5
     counter = 0
     # Sélection d'un actionneur hydraulique
@@ -130,14 +159,27 @@ def AutoCalib(self):
                     ev.Set(state= 0)
                     sleep(0.25)
 
+    self.diagConsole.insert('end', "[AutoCalib] : Pression maximale atteinte à " + str(self.robotAttributes['Sensors']['Pression']['Robot']['Max']) + "V .")
+    self.diagConsole.itemconfig('end', fg= 'green')
+    self.root.update()
+
     # Récupération du temps que met la pompe pour atteindre la pression max
+    self.diagConsole.insert('end', "[AutoCalib] : Détermination du temps de monté en pression...")
+    self.root.update()
+
     self.robotAttributes['Actuators']['Electro_pompe']['Robot']['Time'] = self.root.interface.actuatorClass['Electro_pompe']['Robot'].GetTime(self.robotAttributes)
+
+    self.diagConsole.insert('end', "[AutoCalib] : La pompe met " + str(self.robotAttributes['Actuators']['Electro_pompe']['Robot']['Time']) + "sec à monter en pression.")
+    self.diagConsole.itemconfig('end', fg= 'green')
+    self.root.update()
 
     pressureActuator.Set(state= 1)
     sleep(1)
     pressureActuator.Set(state= 0)
 
     # Détermination des min et max capteur position et de leur type
+    self.diagConsole.insert('end', "[AutoCalib] : Détermination du min/max des actionneurs et de leur type...")
+    self.root.update()
     for subCategory in self.robotAttributes['Sensors']['Position']:
         pressureActuator.Set(state= 1)
         while self.robotAttributes['Sensors']['Pression']['Robot']['Max'] > pressureSensor.Poll(50):
@@ -150,9 +192,17 @@ def AutoCalib(self):
         pressureActuator.Set(state= 0)
         self.robotAttributes['Sensors']['Position'][subCategory]['Min'], self.robotAttributes['Sensors']['Position'][subCategory]['Max'] = self.root.interface.sensorClass['Position'][subCategory].GetMinMax(self.robotAttributes)
 
+        self.diagConsole.insert('end', "[AutoCalib] : Actionneur de " + str(subCategory) + " (Min: " + str(self.robotAttributes['Sensors']['Position'][subCategory]['Min']) + "V; Max: " + str(self.robotAttributes['Sensors']['Position'][subCategory]['Max']) + "V; Type: " + str(self.robotAttributes['Sensors']['Position'][subCategory]['ActuatorType']) + ").")
+        self.diagConsole.itemconfig('end', fg= 'green')
+        self.root.update()
+
     # Récupération de la déviation des capteurs branchés
+    self.diagConsole.insert('end', "[AutoCalib] : Récupération de la déviation dégradée des capteurs...")
+    self.root.update()
+
     print('début du calcul dev')
     Popup(self, 1, texte= "Veuillez débrancher tous les capteurs et appuyer sur 'Continuer'", fermer= 'Continuer')
+    self.root.update()
     for category in self.robotAttributes['Sensors']:
         for subCategory in self.robotAttributes['Sensors'][category]:
             tempList = []
@@ -168,12 +218,25 @@ def AutoCalib(self):
 
     print(self.robotAttributes)
 
-    # Vidage de la pression
+    self.diagConsole.insert('end', "[AutoCalib] : Déviation dégradée des capteurs enregistrée.")
+    self.diagConsole.itemconfig('end', fg= 'green')
+    self.root.update()
+
+    # Vidage de la pression*
+    self.diagConsole.insert('end', "[AutoCalib] : Diminution de la pression...")
+    self.root.update()
+
     for i in range(5):
         for ev in evClassList:
             ev.Set(state= 1)
             sleep(0.5)
             ev.Set(state= 0)
             sleep(0.25)
+
+    self.diagConsole.insert('end', "[AutoCalib] : Fin de la calibration automatique.")
+    self.root.update()
+
+    self.centerFrame.place(relx = 0.20, rely= 0.20)
+    self.centerSubFrameBis.pack_forget()
 
     return True

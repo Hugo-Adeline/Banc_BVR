@@ -100,7 +100,7 @@ class RaspberryInterface():
             value = 0
             for i in range(averaging):
                 value += self.mcp.read_adc(pin)
-            value = str(round(value / 1024 * 5 / averaging, 2))
+            value = str(round(value / 1023 * 5 / averaging, 2))
         elif pinType == 'D':
             value = 0
         return value
