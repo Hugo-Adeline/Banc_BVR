@@ -53,6 +53,8 @@ class RemoveRobotWindow():
 
 
     def Open(self):
+
+        # Ouverture de la page
         SwitchWindow(self.masterFrame,self.root)
         RefreshOptionMenu(self)
 

@@ -32,6 +32,11 @@ class AutomaticDiagnosisWindow():
         self.sensorErrDict = {}
         self.actuatorErrDict = {}
         self.errCount = 0
+        self.testSel = False
+        self.testEng = False
+        self.testEmb = False
+        self.testPre = False
+        self.testVit = False
 
 
     def Setup(self):
@@ -40,9 +45,9 @@ class AutomaticDiagnosisWindow():
         self.robotSelected = self.root.mainMenuWindow.robotSelected
 
         # Création des boutons et labels fixes
-        self.label = tk.Label(self.titleFrame, text="Diagnostic automatique", bg= self.root.defaultbg)
-        self.label.config(font = self.root.fontTitle)
-        self.label.pack(pady = self.root.titlePadY)
+        self.title = tk.Label(self.titleFrame, text="Diagnostic manuel du robot " + str(self.robotSelected.get()), bg= self.root.defaultbg)
+        self.title.config(font = self.root.fontTitle)
+        self.title.pack(pady = self.root.titlePadY)
 
         self.diagConsole = tk.Listbox(self.centerSubFrame, bg= 'white', width= 75, height= 38)
         self.diagConsole.pack()
@@ -68,6 +73,7 @@ class AutomaticDiagnosisWindow():
 
     def Refresh(self):
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
+        self.title.config(text= "Diagnostic manuel du robot " + str(self.robotSelected.get()))
         return
 
 
@@ -81,6 +87,11 @@ class AutomaticDiagnosisWindow():
         self.diagConsole.insert('end', "[AutoDiag] : Initialisation du diagnostic automatique pour le robot: " + self.robotAttributes['Name'] + '...')
         self.root.update()
         self.errCount = 0
+        self.testSel = False
+        self.testEng = False
+        self.testEmb = False
+        self.testPre = False
+        self.testVit = False
 
         # Création du dictionnaire des erreurs
         for category in self.robotAttributes['Sensors']:
@@ -119,12 +130,14 @@ class AutomaticDiagnosisWindow():
                             for i in sensorValues[category][subCategory]:
                                 variance += (i - avgVal)**2
                             variance = variance / len(sensorValues[category][subCategory])
-                            std_dev = variance**(0.5)
+                            stdDev = variance**(0.5)
                             # Le capteur est-il branché ?
-                            if std_dev >= 2*self.robotAttributes['Sensors'][category][subCategory]['Deviation']:
+                            gDev = self.robotAttributes['Sensors'][category][subCategory]['Deviation']
+                            bDev = self.robotAttributes['Sensors'][category][subCategory]['DeviationErr']
+                            if abs(stdDev - gDev) > abs(stdDev - bDev):
                                     self.diagConsole.insert('end', "[Erreur] : (0) Le capteur "  + category + ' ' + subCategory +  " est débranché.")
                                     self.diagConsole.itemconfig('end', fg= 'red')
-                                    self.sensorErrDict[category][subCategory].append('Erreur 0: Capteur débranché')
+                                    self.sensorErrDict[category][subCategory].append('Erreur 0: Faux contact / Capteur débranché')
                                     self.errCount += 1
 
         if self.errCount == 0:
@@ -132,7 +145,7 @@ class AutomaticDiagnosisWindow():
             self.diagConsole.itemconfig('end', fg= 'green')
             self.root.update()
         # Le capteur de pression est-il branché ?
-        elif 'Erreur 0: Capteur débranché' in self.sensorErrDict['Pression']['Robot']:
+        elif 'Erreur 0: Faux contact / Capteur débranché' in self.sensorErrDict['Pression']['Robot']:
             self.diagConsole.insert('end', "[AutoDiag] : Impossible de continuer le diagnostic sans le capteur de pression.")
             self.root.update()
             self.Stop()
@@ -150,16 +163,16 @@ class AutomaticDiagnosisWindow():
             self.root.update()
             # Abaissement de la pression via l'activation des actionneurs de manière répétée
             LowerPressure(self)
-            margin = self.root.interface.margin
-            dev = self.robotAttributes['Sensors']['Pression']['Robot']['Deviation']
+            margin = self.robotAttributes['Margin']
+            scaling = self.robotAttributes['Sensors']['Pression']['Robot']['MarginScaling']
             target = self.robotAttributes['Sensors']['Pression']['Robot']['Min']
             pressure = pressureSensor.Poll(10)
             # La pression a-t-elle atteint Pmin ?
-            if (pressure > target + margin*dev) or (pressure < target - margin*dev):
+            if (pressure > target + margin*scaling) or (pressure < target - margin*scaling):
                 self.diagConsole.insert('end', "[Erreur] : Valeur du capteur de pression non conforme.")
                 self.diagConsole.itemconfig('end', fg= 'red')
                 self.root.update()
-                self.sensorErrDict['Pression']['Robot'].append('Erreur 1: Pression min érronée')
+                self.sensorErrDict['Pression']['Robot'].append('Erreur 1: Pression minimale erronée')
                 self.diagConsole.insert('end', "[AutoDiag] : Impossible de continuer le diagnostic.")
                 self.root.update()
                 self.Stop()
@@ -178,11 +191,10 @@ class AutomaticDiagnosisWindow():
             pressureActuator.Set(state = 0)
             finalPressure = pressureSensor.Poll(10)
             print(finalPressure)
-            margin = self.root.interface.margin
-            dev = self.robotAttributes['Sensors']['Pression']['Robot']['Deviation']
+            scaling = self.robotAttributes['Sensors']['Pression']['Robot']['MarginScaling']
             target = self.robotAttributes['Sensors']['Pression']['Robot']['Max']
             # La pression a-t-elle atteint Pmax ?
-            if finalPressure >= target - margin * dev:
+            if finalPressure >= target - margin * scaling:
                 self.diagConsole.insert('end', "[AutoDiag] : La pression maximale a bien été atteinte.")
                 self.diagConsole.itemconfig('end', fg= 'green')
                 self.root.update()
@@ -192,16 +204,16 @@ class AutomaticDiagnosisWindow():
                 for subCategory in self.robotAttributes['Sensors']['Position']:
                     if self.sensorErrDict['Position'][subCategory] != []:
                         continue
-                    if self.robotAttributes['Sensors']['Position'][subCategory]['ActuatorType'] == 'S-Shaft':
+                    if self.robotAttributes['Sensors']['Position'][subCategory]['ActuatorType'] == 'S-Cam':
                         continue
                     minSensorMes, maxSensorMes = self.root.interface.sensorClass['Position'][subCategory].GetMinMax(self.robotAttributes)
                     minSensor, maxSensor = self.robotAttributes['Sensors']['Position'][subCategory]['Min'],  self.robotAttributes['Sensors']['Position'][subCategory]['Max']
-                    dev = self.robotAttributes['Sensors']['Position'][subCategory]['Deviation']
+                    scaling = self.robotAttributes['Sensors']['Position'][subCategory]['MarginScaling']
                     print(subCategory, "minmes = ", minSensorMes, " ;min = ", minSensor, " ;maxSensorMes = ", maxSensorMes, " ;max = ", maxSensor)
                     error = False
-                    if minSensorMes > minSensor + self.root.interface.margin*dev or minSensorMes < minSensor - self.root.interface.margin*dev:
+                    if minSensorMes > minSensor + margin*scaling or minSensorMes < minSensor - margin*scaling:
                         error = True
-                    if maxSensorMes > maxSensor + self.root.interface.margin*dev or maxSensorMes < maxSensor - self.root.interface.margin*dev:
+                    if maxSensorMes > maxSensor + margin*scaling or maxSensorMes < maxSensor - margin*scaling:
                         error = True
                     verif = 1
                     if error == False:
@@ -214,7 +226,7 @@ class AutomaticDiagnosisWindow():
                     self.diagConsole.insert('end', "[Erreur] : Le capteur de pression et/ou la pompe est défaillant(e).")
                     self.diagConsole.itemconfig('end', fg= 'red')
                     self.root.update()
-                    self.sensorErrDict['Pression']['Robot'].append('Erreur 3: Valeur capteur érronée')
+                    self.sensorErrDict['Pression']['Robot'].append('Erreur 3: Défaut capteur')
                     self.actuatorErrDict['Electro_pompe']['Robot'].append('Erreur 4: Défaut actionneur')
                     self.errCount +=1
                 else:
@@ -228,7 +240,7 @@ class AutomaticDiagnosisWindow():
                         self.diagConsole.insert('end', "[Erreur] : Le capteur de pression est défaillant.")
                         self.diagConsole.itemconfig('end', fg= 'red')
                         self.root.update()
-                        self.sensorErrDict['Pression']['Robot'].append('Erreur 3: Valeur capteur érronée')
+                        self.sensorErrDict['Pression']['Robot'].append('Erreur 3: Défaut capteur')
                 self.errCount +=1
                 self.diagConsole.insert('end', "[AutoDiag] : Impossible de continuer le diagnostic.")
                 self.root.update()
@@ -244,7 +256,7 @@ class AutomaticDiagnosisWindow():
             # La perte pression est-elle trop élevée ?
             print("Pinit = ", finalPressure, "; Pfinal = ", pressure)
             if pressure < finalPressure - 0.5:
-                self.actuatorErrDict['Electro_pompe']['Robot'].append('Erreur 2: Perte de pression')
+                self.actuatorErrDict['Electro_pompe']['Robot'].append('Erreur 2: Perte de pression importante')
                 self.diagConsole.insert('end', "[Erreur] : Le robot ne tient pas la pression.")
                 self.diagConsole.itemconfig('end', fg= 'red')
                 self.root.update()
@@ -253,12 +265,14 @@ class AutomaticDiagnosisWindow():
                 self.root.update()
                 self.Stop(pressureSensorTest= True)
                 return
+            self.testPre = True
             self.diagConsole.insert('end', "[AutoDiag] : Le robot maintient la pression.")
             self.diagConsole.itemconfig('end', fg= 'green')
             self.root.update()
             self.diagConsole.insert('end', "[AutoDiag] : Le système de pression fonctionne.")
             self.diagConsole.itemconfig('end', fg= 'green')
             self.root.update()
+
         # Test des capteurs et actionneurs
         self.diagConsole.insert('end', "[AutoDiag] : Début du test des capteurs de position...")
         self.root.update()
@@ -267,33 +281,49 @@ class AutomaticDiagnosisWindow():
             if self.sensorErrDict['Position'][subCategory] != []:
                 continue
             # Activation de la pompe jusqu'à Pmax
-            pressureActuator.Set(state= 1)
-            while self.robotAttributes['Sensors']['Pression']['Robot']['Max'] > pressureSensor.Poll(10):
-                sleep(0.1)
-            pressureActuator.Set(state= 0)
-            # Vérification des valeurs min/max du capteur
+            if self.robotAttributes['Type'] != 'Electrique':
+                pressureActuator.Set(state= 1)
+                while self.robotAttributes['Sensors']['Pression']['Robot']['Max'] > pressureSensor.Poll(10):
+                    sleep(0.1)
+                pressureActuator.Set(state= 0)
+            # Vérification des valeurs min/max des capteur de positions
             minSensorMes, maxSensorMes = self.root.interface.sensorClass['Position'][subCategory].GetMinMax(self.robotAttributes)
             minSensor, maxSensor = self.robotAttributes['Sensors']['Position'][subCategory]['Min'],  self.robotAttributes['Sensors']['Position'][subCategory]['Max']
-            dev = self.robotAttributes['Sensors']['Position'][subCategory]['Deviation']
+            scaling = self.robotAttributes['Sensors']['Position'][subCategory]['MarginScaling']
             print(subCategory, "minmes = ", minSensorMes, " ;min = ", minSensor, " ;maxSensorMes = ", maxSensorMes, " ;max = ", maxSensor)
             error = False
             errMin = False
             errMax = False
-            if minSensorMes > minSensor + self.root.interface.margin*dev or minSensorMes < minSensor - self.root.interface.margin*dev:
+            if minSensorMes > minSensor + margin*scaling or minSensorMes < minSensor - margin*scaling:
                 error = True
                 errMin = True
-            if maxSensorMes > maxSensor + self.root.interface.margin*dev or maxSensorMes < maxSensor - self.root.interface.margin*dev:
+            if maxSensorMes > maxSensor + margin*scaling or maxSensorMes < maxSensor - margin*scaling:
                 error = True
                 errMax = True
             if error:
-                if self.robotAttributes['Sensors']['Position'][subCategory]['ActuatorType'] == 'S-Shaft':
+                if self.robotAttributes['Type'] != 'Electrique':
+                    self.diagConsole.insert('end', "[Erreur] : Système contrôlé par un moteur électrique en défaut.")
+                    self.diagConsole.itemconfig('end', fg= 'red')
+                    self.root.update()
+                    self.diagConsole.insert('end', "[Erreur] : Le capteur de Position " + subCategory + " est à tester.")
+                    self.diagConsole.itemconfig('end', fg= 'red')
+                    self.root.update()
+                    self.sensorErrDict['Position'][subCategory].append('Erreur 3: Défaut capteur')
+                    self.errCount +=1
+                    self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " + est à tester.")
+                    self.diagConsole.itemconfig('end', fg= 'red')
+                    self.root.update()
+                    self.actuatorErrDict['Moteur_électrique'][subCategory.rstrip('0123456789') + '+'].append('Erreur 4: Défaut actionneur')
+                    self.errCount +=1
+                    continue
+                if self.robotAttributes['Sensors']['Position'][subCategory]['ActuatorType'] == 'S-Cam':
                     self.diagConsole.insert('end', "[Erreur] : Défaillance sur le système S-Cam, impossible de déterminer le défaut.")
                     self.diagConsole.itemconfig('end', fg= 'red')
                     self.root.update()
                     self.diagConsole.insert('end', "[Erreur] : Le capteur de Position " + subCategory + " est à tester.")
                     self.diagConsole.itemconfig('end', fg= 'red')
                     self.root.update()
-                    self.sensorErrDict['Position'][subCategory].append('Erreur 3: Valeur capteur érronée')
+                    self.sensorErrDict['Position'][subCategory].append('Erreur 3: Défaut capteur')
                     self.errCount +=1
                     self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " + est à tester.")
                     self.diagConsole.itemconfig('end', fg= 'red')
@@ -306,55 +336,61 @@ class AutomaticDiagnosisWindow():
                 while self.robotAttributes['Sensors']['Pression']['Robot']['Max'] > pressureSensor.Poll(10):
                     sleep(0.1)
                 pressureActuator.Set(state= 0)
-                # Récupération et sauvegarde de la valeur de pression initiale
-                initPressure = pressureSensor.Poll(10)
-                # Activation de l'actionneur plusieurs fois (on utilise la fonction GetMinMax)
-                for i in range(3):
-                    self.root.interface.sensorClass['Position'][subCategory].GetMinMax(self.robotAttributes)
-                # Récupération et sauvegarde de la valeur de pression finale
-                finalPressure = pressureSensor.Poll(10)
-                # Les valeurs de pression sont-elles égales ?
-                dev = self.robotAttributes['Sensors']['Pression']['Robot']['Deviation']
-                margin = self.root.interface.margin
-                if finalPressure <= initPressure - margin * dev:
+                # D'où vient la défaillance ?
+                if errMax and errMin:
                     self.diagConsole.insert('end', "[Erreur] : Le capteur de Position " + subCategory + " est défaillant.")
                     self.diagConsole.itemconfig('end', fg= 'red')
                     self.root.update()
-                    self.sensorErrDict['Position'][subCategory].append('Erreur 3: Valeur capteur érronée')
+                    self.sensorErrDict['Position'][subCategory].append('Erreur 3: Défaut capteur')
                     self.errCount +=1
-                else:
-                    if errMax and errMin:
-                        self.diagConsole.insert('end', "[Erreur] : Les actionneurs de " + subCategory.rstrip(' 0123456789') + " sont défaillants.")
+                elif errMax:
+                    self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " + est défaillant.")
+                    self.diagConsole.itemconfig('end', fg= 'red')
+                    self.root.update()
+                    self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '+'].append('Erreur 4: Défaut actionneur')
+                    self.errCount +=1
+                elif errMin:
+                    try:
+                        self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '-'].append('Erreur 4: Défaut actionneur')
+                        self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " - est défaillant.")
                         self.diagConsole.itemconfig('end', fg= 'red')
                         self.root.update()
-                        self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '+'].append('Erreur 4: Défaut actionneur')
                         self.errCount +=1
-                        try:
-                            self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '-'].append('Erreur 4: Défaut actionneur')
-                            self.errCount +=1
-                        except:
-                            None
-                    elif errMax:
+                    except:
                         self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " + est défaillant.")
                         self.diagConsole.itemconfig('end', fg= 'red')
                         self.root.update()
                         self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '+'].append('Erreur 4: Défaut actionneur')
                         self.errCount +=1
-                    elif errMin:
-                        try:
-                            self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '-'].append('Erreur 4: Défaut actionneur')
-                            self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " - est défaillant.")
-                            self.diagConsole.itemconfig('end', fg= 'red')
-                            self.root.update()
-                            self.errCount +=1
-                        except:
-                            self.diagConsole.insert('end', "[Erreur] : L'actionneur de " + subCategory.rstrip(' 0123456789') + " + est défaillant.")
-                            self.diagConsole.itemconfig('end', fg= 'red')
-                            self.root.update()
-                            self.actuatorErrDict['Electrovanne'][subCategory.rstrip('0123456789') + '+'].append('Erreur 4: Défaut actionneur')
-                            self.errCount +=1
+        self.testEng = True
+        self.testSel = True
+        self.testEmb = True
 
         self.diagConsole.insert('end', "[AutoDiag] : Fin du test des capteurs de position.")
+        self.diagConsole.insert('end', "[AutoDiag] : Début du test du capteur de vitesse...")
+        self.root.update()
+
+        # Vérification des valeurs min/max du capteur de vitesse
+        minSensorMes, maxSensorMes = self.root.interface.sensorClass['Vitesse']['Boîte de vitesses'].GetMinMax(self.robotAttributes)
+        minSensor, maxSensor = self.robotAttributes['Sensors']['Vitesse']['Boîte de vitesses']['Min'],  self.robotAttributes['Sensors']['Vitesse']['Boîte de vitesses']['Max']
+        scaling = self.robotAttributes['Sensors']['Vitesse']['Boîte de vitesses']['MarginScaling']
+        error = False
+        errMin = False
+        errMax = False
+        if minSensorMes > minSensor + margin*scaling or minSensorMes < minSensor - margin*scaling:
+            error = True
+            errMin = True
+        if maxSensorMes > maxSensor + 10 or maxSensorMes < maxSensor - 10: # La déviation est de 2 Hertz environ
+            error = True
+            errMax = True
+        if error:
+            self.diagConsole.insert('end', "[Erreur] : Le capteur de vitesse est défaillant.")
+            self.diagConsole.itemconfig('end', fg= 'red')
+            self.root.update()
+            self.sensorErrDict['Vitesse']['Boîte de vitesses'].append('Erreur 3: Défaut capteur')
+        self.testVit = True
+
+        self.diagConsole.insert('end', "[AutoDiag] : Fin du test du capteur de vitesse.")
         self.root.update()
 
         self.Stop(pressureSensorTest= True)
@@ -444,20 +480,37 @@ class AutomaticDiagnosisWindow():
                                 pdf.add_error('Autre', error)
 
             if pdf.errPre == 0:
-                pdf.add_error('Pression', 'Fonctionnement nominal')
+                if self.testPre:
+                    pdf.add_error('Pression', 'Système hydraulique opérationnel')
+                else:
+                    pdf.add_error('Pression', 'Système hydraulique non testé')
             if pdf.errSel == 0:
-                pdf.add_error('Sélection', 'Fonctionnement nominal')
+                if self.testSel:
+                    pdf.add_error('Sélection', 'Système de sélection opérationnel')
+                else:
+                    pdf.add_error('Sélection', 'Système de sélection non testé')
             if pdf.errEmb == 0:
-                pdf.add_error('Embrayage', 'Fonctionnement nominal')
+                if self.testEmb:
+                    pdf.add_error('Embrayage', "Système d'embrayage opérationnel")
+                else:
+                    pdf.add_error('Embrayage', "Système d'embrayage non testé")
             if pdf.errEng == 0:
-                pdf.add_error('Engagement', 'Fonctionnement nominal')
+                if self.testEng:
+                    pdf.add_error('Engagement', "Système d'engagement opérationnel")
+                else:
+                    pdf.add_error('Engagement', "Système d'engagement non testé")
             if pdf.errAut == 0:
-                pdf.add_error('Autre', 'Fonctionnement nominal')
+                if self.testVit:
+                    pdf.add_error('Autre', 'Capteur de vitesse opérationnel')
+                else:
+                    pdf.add_error('Autre', 'Capteur de vitesse non testé')
 
             self.diagConsole.insert('end', "[Rapport] : Le rapport à été généré.")
             self.root.update()
             self.diagConsole.insert('end', "[Rapport] : Envoi du mail contenant le rapport...")
             self.root.update()
+
+            pdf.set_receiver_email(self.root.configDict['PDF_Generator']['ReceiverEmail'])
 
             validation = pdf.done()
 

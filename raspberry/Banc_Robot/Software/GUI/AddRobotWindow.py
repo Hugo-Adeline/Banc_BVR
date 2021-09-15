@@ -368,7 +368,7 @@ class AddRobotWindow():
             self.actuatorDict[category][subCategory] = (self.root.interface.actuatorClass[category][subCategory].GetdBValues())
 
         # On envoi le tout à la base de données et on vérifie qu'il n'y a pas eu d'erreur
-        retour = self.root.dB.AddRobot(self.nameRobot.get() ,int(self.numberOfGear.get()), self.typeRobot.get(), self.sensorDict, self.actuatorDict)
+        retour = self.root.dB.AddRobot(self.nameRobot.get() ,int(self.numberOfGear.get()), self.typeRobot.get(), self.root.interface.margin, self.sensorDict, self.actuatorDict)
         if retour == False:
             Popup(self, 1, texte= "La robot existe déjà ou le nom est invalide.")
             return
