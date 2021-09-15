@@ -50,7 +50,7 @@ class MainMenuWindow():
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
         self.button.pack(pady = 2)
 
-        self.button = tk.Button(self.centerSubFrame, text="Diagnostic manuel", command= self.root.overrideWindow.Open)
+        self.button = tk.Button(self.centerSubFrame, text="Diagnostic manuel", command= self.root.manualDiagnosisWindow.Open)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
         self.button.pack()
 
@@ -74,3 +74,4 @@ class MainMenuWindow():
             command = "/usr/bin/sudo /sbin/shutdown -h now"
             process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
             process.communicate()[0]
+            self.root.destroy()

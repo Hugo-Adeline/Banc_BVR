@@ -28,6 +28,8 @@ class CalibrationWindow():
         self.nameRobot = tk.StringVar()
         self.gearsRobot = tk.StringVar()
         self.typeRobot = tk.StringVar()
+        self.margin = tk.StringVar()
+        self.margin.set(self.root.interface.margin)
 
         # Création des cadres
         self.titleFrame = tk.Frame(self.masterFrame, bg= self.root.defaultbg)
@@ -63,6 +65,7 @@ class CalibrationWindow():
         self.nameRobot.set(self.robotAttributes['Name'])
         self.gearsRobot.set(self.robotAttributes['Gears'])
         self.typeRobot.set(self.robotAttributes['Type'])
+        self.margin.set(self.robotAttributes['Margin'])
 
         # Création des boutons et labels fixes
         self.title.set("Calibration du robot: "+self.robotSelected.get())
@@ -94,9 +97,13 @@ class CalibrationWindow():
         self.label.config(font = self.root.fontLabel, bg= self.root.defaultbg)
         self.label.grid(column = 1, row = 3, sticky= 'w')
 
-        self.label = tk.Entry(self.centerSubFrame, textvariable= self.nameRobot)
-        self.label.config(font = self.root.fontLabel, bg= 'white')
-        self.label.grid(column = 2, row = 1)
+        self.label = tk.Label(self.centerSubFrame, text="Marge (défaut = " + str(self.root.interface.margin) + "): ")
+        self.label.config(font = self.root.fontLabel, bg= self.root.defaultbg)
+        self.label.grid(column = 1, row = 4, sticky= 'w')
+
+        self.entry = tk.Entry(self.centerSubFrame, textvariable= self.nameRobot)
+        self.entry.config(font = self.root.fontLabel, bg= 'white')
+        self.entry.grid(column = 2, row = 1)
 
         self.entry = tk.Entry(self.centerSubFrame, textvariable= self.gearsRobot, state= 'disabled')
         self.entry.config(font= self.root.fontLabel, bg= self.root.defaultbg)
@@ -105,6 +112,10 @@ class CalibrationWindow():
         self.entry = tk.Entry(self.centerSubFrame, textvariable= self.typeRobot, state= 'disabled')
         self.entry.config(font= self.root.fontLabel, bg= self.root.defaultbg)
         self.entry.grid(column = 2, row = 3)
+
+        self.marginEntry = tk.Entry(self.centerSubFrame, textvariable= self.margin, validate= 'key', validatecommand= (self.vcmdFloat, '%P'))
+        self.marginEntry.config(font= self.root.fontLabel, bg= 'white')
+        self.marginEntry.grid(column = 2, row = 4)
 
         self.button = tk.Button(self.masterFrame, text="Valider", command= self.ValidateCalibration)
         self.button.config(font = self.root.fontButton, bg= 'lightgrey')
@@ -153,6 +164,11 @@ class CalibrationWindow():
         self.nameRobot.set(self.robotAttributes['Name'])
         self.gearsRobot.set(self.robotAttributes['Gears'])
         self.typeRobot.set(self.robotAttributes['Type'])
+        self.margin.set(self.robotAttributes['Margin'])
+        if float(self.margin.get()) != self.root.interface.margin:
+            self.marginEntry.config(fg= 'red')
+        else:
+            self.marginEntry.config(fg= 'black')
 
         # Destruction de la partie variable de la page
         for i in range(len(self.sensorEntryVarList)):
@@ -336,7 +352,7 @@ class CalibrationWindow():
 
         # On modifie les valeurs de la robot dans la base de donnée via la fonction de robot_dB et on ouvre un popup de confirmation
         if confirmation == True:
-            self.root.dB.ModifyRobot(self.robotSelected.get(), self.nameRobot.get(), int(self.gearsRobot.get()), self.typeRobot.get(), self.sensorDict, self.actuatorDict)
+            self.root.dB.ModifyRobot(self.robotSelected.get(), self.nameRobot.get(), int(self.gearsRobot.get()), self.typeRobot.get(), float(self.margin.get()), self.sensorDict, self.actuatorDict)
             Popup(self, 1, texte= "La calibration du robot " + self.nameRobot.get() + " a été enregistré dans la base de données.")
 
         # On réinitialise les listes de capteurs et d'actionneurs

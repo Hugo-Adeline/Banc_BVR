@@ -3,7 +3,7 @@ from time import sleep
 import configparser
 path = os.path.dirname(os.path.abspath(__file__))
 config = configparser.ConfigParser()
-config.read(path + '/config.ini')
+config.read(path + '/Software/config.ini')
 autoExe = bool(int(config['Launching_Options']['USBAutoExecution']))
 
 while True:

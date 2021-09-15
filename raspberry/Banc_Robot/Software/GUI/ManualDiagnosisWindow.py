@@ -2,10 +2,12 @@
 
 import tkinter as tk
 import tkinter.font as font
+from math import trunc
 from GUI.GUI_utils import SwitchWindow, Popup
 from PIL import Image, ImageTk
-from functools import partial
 from Thread import Thread
+from GUI.AutoDiag_utils import LowerPressure
+
 
 class ManualDiagnosisWindow():
     def __init__(self, root):
@@ -18,161 +20,56 @@ class ManualDiagnosisWindow():
 
         # Création des cadres
         self.titleFrame = tk.Frame(self.masterFrame, bg= self.root.defaultbg)
-        self.centerSubFrame = tk.Frame(self.masterFrame, relief= 'ridge', bd= 3, bg= self.root.defaultbg)
-        self.sensorFrame = tk.Frame(self.centerSubFrame, relief= 'ridge', bd= 1, bg= self.root.defaultbg)
-        self.buttonFrame = tk.Frame(self.centerSubFrame, bg= self.root.defaultbg)
-        self.shifterFrame = tk.Frame(self.centerSubFrame, bg= self.root.defaultbg)
+        self.centerFrame = tk.Frame(self.masterFrame, relief= 'groove', bd= 3, bg= self.root.defaultbg)
 
         # Placement des cadres
         self.titleFrame.pack(side= 'top')
-        self.centerSubFrame.pack(expand= 'true')
-        self.sensorFrame.pack(side= 'left', fill= 'y')
-        self.buttonFrame.pack(side= 'right', pady= 15, padx = 15)
-        self.shifterFrame.pack(side= 'left', expand= True, padx = 15)
+        self.centerFrame.pack(side= 'top', pady= 115)
 
-         # Définition des variables
-        self.robotSelected = tk.StringVar()
-        self.refreshingThread = None
-        self.robotAttributes = None
+        # Déclaration des variables
         self.titre = tk.StringVar()
-        self.selectedGearLabel = tk.StringVar()
-        self.selectedGearLabel.set('N')
-        self.sensorGearLabelList = []
-        self.sensorRobotLabelList= []
-        self.sensorLabelList = []
-        self.sensorLabel = {}
-        self.shifterButtonList = []
-        self.sensorRobotLabelListVarDict = {}
-        self.selectedGear = 0
+        self.robotSelected = tk.StringVar()
+        self.activationTime = 0.5
+        self.robotAttributes = None
+        self.refreshingThread = None
+        self.sensorMinMaxDict = {}
+        self.actuatorButtonDict = {}
+        self.animatedLabelDict = {}
+        self.sensorLabelDict = {}
+        self.sensorLabelVarDict = {}
+        self.motorState = False
 
-        # Création des paramètres
-        self.shifterButtonFont = font.Font(size= 22, weight= 'bold')
-        self.shifterButtonHeight = 1
-        self.shifterButtonWidth = 2
-        self.fontGearButton = font.Font(size= 40, weight= 'bold')
-        self.fontGear = font.Font(size= 40, weight= 'bold')
-        self.fontSensorTitle = font.Font(size= 20, weight= 'bold')
+        # Paramètres
+        self.fontTitleSensor = font.Font(size= 20, weight= 'bold')
         self.fontSensor = font.Font(size= 19, weight= 'bold')
 
 
     def Setup(self):
 
-        # Récupération de la robot sélectionnée pour le diagnostic
-        self.robotSelected = self.root.mainMenuWindow.robotSelected
-        self.titre.set("Diagnostic manuel du robot " + str(self.robotSelected.get()))
-        self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
-
         # Création des boutons et labels fixes
-        self.label = tk.Label(self.titleFrame, textvariable= self.titre)
-        self.label.config(font = self.root.fontTitle, bg= self.root.defaultbg)
-        self.label.pack(pady = self.root.titlePadY)
+        label = tk.Label(self.titleFrame, textvariable= self.titre, bg= self.root.defaultbg)
+        label.config(font = self.root.fontTitle)
+        label.pack(pady = self.root.titlePadY)
 
-        self.label = tk.Label(self.buttonFrame, textvariable= self.selectedGearLabel)
-        self.label.config(font = self.fontGear, bg= 'white', borderwidth= 3, relief= "groove", width= 2, height=1)
-        self.label.pack()
-
-        self.button = tk.Button(self.buttonFrame, text= "▲", command= self.Upshift)
-        self.button.config(font = self.fontGearButton, borderwidth= 3, width= 5, height=3, bg = 'lightgrey')
-        self.button.pack()
-
-        self.button = tk.Button(self.buttonFrame, text= "▼", command= self.Downshift)
-        self.button.config(font = self.fontGearButton, borderwidth= 3, width= 5, height=3, bg = 'lightgrey')
-        self.button.pack()
-
-        self.label = tk.Label(self.sensorFrame, text="Capteur")
-        self.label.config(font = self.fontSensorTitle, bg= self.root.defaultbg)
-        self.label.grid(column= 1, row= 1, sticky= 'w')
-
-        self.label = tk.Label(self.sensorFrame, text="Robot")
-        self.label.config(font = self.fontSensorTitle, bg= self.root.defaultbg)
-        self.label.grid(column= 2, row= 1, sticky= 'w')
-
-        self.label = tk.Label(self.sensorFrame, text="Nominal")
-        self.label.config(font = self.fontSensorTitle, bg= self.root.defaultbg)
-        self.label.grid(column= 3, row= 1, sticky= 'w')
-
-        # Ajout de l'image du levier de vitesse pour le nombre de vitesse du robot
-        self.image = Image.open(self.root.imageDict['Shifter'][self.robotAttributes['Gears']])
-        self.render = ImageTk.PhotoImage(self.image)
-        self.imgLabel = tk.Label(self.shifterFrame, image=self.render, bg= self.root.defaultbg)
-        self.imgLabel.grid(column= 0, columnspan= str(self.robotAttributes['Gears']//2+1), row=2)
-
-        # Création des boutons de sélection des vitesses
-        self.shifterButtonList.append(tk.Button(self.shifterFrame, text= 'R', command= lambda: self.SelectGear('R')))
-        self.shifterButtonList[0].config(font = self.shifterButtonFont, width= self.shifterButtonWidth, height= self.shifterButtonHeight)
-        self.shifterButtonList[0].grid(column= 0, row= 1)
-        self.shifterButtonList.append(tk.Button(self.shifterFrame, text= 'N', command= lambda: self.SelectGear('N')))
-        self.shifterButtonList[1].config(font = self.shifterButtonFont, width= self.shifterButtonWidth, height= self.shifterButtonHeight)
-        self.shifterButtonList[1].grid(column= 2, row= 2)
-
-        self.button = tk.Button(self.masterFrame, text= "Retour", command= self.Retour)
-        self.button.config(font = self.root.fontButton, bg= 'lightgrey')
-        self.button.place(relx= self.root.retourRelX, rely= self.root.retourRelY)
+        button = tk.Button(self.masterFrame, text= "Retour", command= self.Close)
+        button.config(font = self.root.fontButton)
+        button.place(relx= self.root.retourRelX, rely= self.root.retourRelY)
 
 
-    # Fonction pour ouvrir la fenêtre
     def Open(self):
+        #retour = Popup(self, 2, texte= "ATTENTION: Ce menu est reservé au personnel habilité", valider= "Continuer", fermer= "Retour")
+        #if retour == False:
+        #    return
         SwitchWindow(self.masterFrame,self.root)
         self.Refresh()
         if self.refreshingThread == None:
-            self.refreshingThread = Thread('refreshingThread', self.SensorRefresh, 0.5)
+            self.refreshingThread = Thread('refreshingThread', self.SensorRefresh, 0.1)
             self.refreshingThread.start()
 
 
-    def Retour(self):
+    def Close(self):
         self.root.interface.GPIOReset()
         self.root.mainMenuWindow.Open()
-
-
-    # Fonction pour monter un rapport
-    def Upshift(self):
-        if self.selectedGearLabel.get() == 'R':
-            self.selectedGearLabel.set('N')
-            self.selectedGear = 0
-        elif self.selectedGearLabel.get() == 'N':
-            self.selectedGearLabel.set('1')
-            self.selectedGear = 1
-        elif int(self.selectedGearLabel.get()) < (self.robotAttributes['Gears']-1):
-            self.selectedGear += 1
-            self.selectedGearLabel.set(self.selectedGear)
-        self.Refresh()
-
-
-    # Fonction pour changer le rapport
-    def SelectGear(self, gear):
-        if gear == 'R':
-            self.selectedGearLabel.set('R')
-            self.selectedGear = -1
-        elif gear == -1:
-            self.selectedGearLabel.set('R')
-            self.selectedGear = -1
-        elif gear == 'N':
-            self.selectedGearLabel.set('N')
-            self.selectedGear = 0
-        elif gear == 0:
-            self.selectedGearLabel.set('N')
-            self.selectedGear = 0
-        elif gear < (self.robotAttributes['Gears']-1):
-            self.selectedGear = gear
-            self.selectedGearLabel.set(gear)
-        else:
-            self.selectedGear = self.robotAttributes['Gears']-1
-            self.selectedGearLabel.set(self.robotAttributes['Gears']-1)
-        self.Refresh()
-
-
-    # Fonction pour descendre un rapport
-    def Downshift(self):
-        if self.selectedGearLabel.get() == 'N':
-            self.selectedGearLabel.set('R')
-            self.selectedGear = -1
-        elif self.selectedGearLabel.get() == '1':
-            self.selectedGearLabel.set('N')
-            self.selectedGear = 0
-        elif self.selectedGearLabel.get() != 'R':
-            self.selectedGear -= 1
-            self.selectedGearLabel.set(self.selectedGear)
-        self.Refresh()
 
 
     def Refresh(self):
@@ -182,92 +79,237 @@ class ManualDiagnosisWindow():
         self.titre.set("Diagnostic manuel du robot " + str(self.robotSelected.get()))
         self.robotAttributes = self.root.dB.GetRobotAttributes(self.robotSelected.get())
 
-        # Changement de l'image
-        self.image = Image.open(self.root.imageDict['Shifter'][self.robotAttributes['Gears']])
-        self.render = ImageTk.PhotoImage(self.image)
-        self.imgLabel.config(image= self.render, bg= self.root.defaultbg)
-        self.imgLabel.grid(column= 0, columnspan= str(self.robotAttributes['Gears']//2+1), row=2)
+        # Destruction de l'ancienne interface
+        self.centerFrame.destroy()
+        for key in self.sensorLabelDict:
+            for i in range(len(self.sensorLabelDict[key])):
+                j = len(self.sensorLabelDict[key])-1-i
+                self.sensorLabelDict[key][j][0].destroy()
+                self.sensorLabelDict[key][j][1].destroy()
+                self.sensorLabelDict[key].pop()
+        self.sensorLabelDict = {}
+        for key in self.sensorLabelVarDict:
+            self.sensorLabelVarDict[key].set(None)
+        self.sensorLabelVarDict = {}
+        for key in self.actuatorButtonDict:
+            self.actuatorButtonDict[key].destroy()
+        self.actuatorButtonDict = {}
+        for key in self.animatedLabelDict:
+            self.animatedLabelDict[key]['Label'].destroy()
+        self.animatedLabelDict = {}
 
-        # Suppression des anciens capteurs
-        for i in range(len(self.sensorLabelList)):
-            self.sensorLabelList[-1].destroy()
-            self.sensorLabelList.pop()
-            self.sensorRobotLabelList[-1].destroy()
-            self.sensorRobotLabelList.pop()
-            self.sensorGearLabelList[-1].destroy()
-            self.sensorGearLabelList.pop()
-        for key in self.sensorRobotLabelListVarDict:
-            for subKey in self.sensorRobotLabelListVarDict[key]:
-                self.sensorRobotLabelListVarDict[key][subKey].set(None)
-            self.sensorRobotLabelListVarDict[key] = {}
-        self.sensorRobotLabelListVarDict = {}
-
+        # Création d'un nouveau cadre
+        self.centerFrame = tk.Frame(self.masterFrame, relief= 'groove', bd= 3, bg= self.root.defaultbg)
+        self.centerFrame.pack(side= 'top', pady= 115)
 
         # Création des nouveaux labels
-        sensors = self.robotAttributes['Sensors']
-        for category in sensors:
-            for subCategory in sensors[category]:
-                self.sensorLabelList.append(tk.Label(self.sensorFrame, text= category + ' ' + subCategory + ":"))
-                self.sensorLabelList[-1].config(font = self.root.fontSensor, bg= self.root.defaultbg)
-                self.sensorLabelList[-1].grid(row = i+2, column = 1, sticky= 'w')
+        label = tk.Label(self.centerFrame, text="Capteur", bg= self.root.defaultbg)
+        label.config(font = self.fontTitleSensor)
+        label.grid(column= 1, row= 0)
+
+        label = tk.Label(self.centerFrame, text="Actionneur", bg= self.root.defaultbg)
+        label.config(font = self.fontTitleSensor, width= 13)
+        label.grid(column= 4, row= 0)
+
+        for category in self.robotAttributes['Sensors']:
+            for subCategory in self.robotAttributes['Sensors'][category]:
+                key = category + ' ' + subCategory.rstrip(' 0123456789')
                 try:
-                    self.sensorRobotLabelListVarDict[category][subCategory] = tk.StringVar()
+                    type(self.sensorLabelDict[key]) == list()
                 except:
-                    self.sensorRobotLabelListVarDict[category] = {}
-                    self.sensorRobotLabelListVarDict[category][subCategory] = tk.StringVar()
-                self.sensorRobotLabelListVarDict[category][subCategory].set(0)
-                self.sensorRobotLabelList.append(tk.Label(self.sensorFrame, textvariable= self.sensorRobotLabelListVarDict[category][subCategory]))
-                self.sensorRobotLabelList[-1].config(font = self.root.fontValues, bg= 'white', borderwidth= 2, relief= "groove", width= 10)
-                self.sensorRobotLabelList[-1].grid(row = i+2, column = 2)
-                if self.root.interface.sensorClass[category][subCategory].GetNominalValue(sensor) != None:
-                    self.sensorGearLabelList.append(tk.Label(self.sensorFrame, text= self.root.interface.sensorClass[category][subCategory].GetNominalValue(sensor, self.selectedGear)))
-                    self.sensorGearLabelList[-1].config(font = self.root.fontValues, bg= 'white', borderwidth= 2, relief= "groove", width= 10)
+                    self.sensorLabelDict[key] = []
+                self.sensorLabelVarDict[category + ' ' + subCategory] = tk.StringVar()
+                self.sensorLabelVarDict[category + ' ' + subCategory].set(0)
+                self.sensorLabelDict[key].append((tk.Label(self.centerFrame, text= category + ' ' + subCategory + ':', bg= self.root.defaultbg),
+                                                       tk.Label(self.centerFrame, textvariable= self.sensorLabelVarDict[category + ' ' + subCategory], bg= self.root.defaultbg)))
+                self.sensorLabelDict[key][-1][0].config(font= self.root.fontSensor)
+                self.sensorLabelDict[key][-1][1].config(font = self.root.fontValues, borderwidth= 2, bg= 'white', relief= "groove", width= 10)
+
+        rowCount = 1
+        for key in self.sensorLabelDict:
+            rowActuator = rowCount
+            for widgets in self.sensorLabelDict[key]:
+                if (widgets == self.sensorLabelDict[key][0]) and (len(self.sensorLabelDict[key]) > 1):
+                    widgets[0].grid(column= 1, row= rowCount, sticky= 'sw')
+                    widgets[1].grid(column= 2, row= rowCount, sticky= 's')
+                elif (widgets == self.sensorLabelDict[key][-1]) and (len(self.sensorLabelDict[key]) > 1):
+                    widgets[0].grid(column= 1, row= rowCount, sticky= 'nw')
+                    widgets[1].grid(column= 2, row= rowCount, sticky= 'n')
                 else:
-                    self.sensorGearLabelList.append(tk.Label(self.sensorFrame, text= ''))
-                    self.sensorGearLabelList[-1].config(font = self.root.fontValues, borderwidth= 2, relief= "groove", width= 10, bg= self.root.defaultbg)
-                self.sensorGearLabelList[-1].grid(row = i+2, column = 3)
+                    widgets[0].grid(column= 1, row= rowCount, sticky= 'w')
+                    widgets[1].grid(column= 2, row= rowCount)
+                #DEBUT AJOUT
+                if 'Vitesse' in key:
+                    self.motorButton = tk.Button(self.centerFrame, text= '▶', command= self.SetMotor)
+                    self.motorButton.config(width = 6, height = 3, bg= 'lightgrey', activebackground= self.root.defaultbg)
+                    self.motorButton.grid(column= 3, row= rowCount)
+                    imageSpeed = Image.open(self.root.imageDict['SpeedBench']['Off'])
+                    self.animatedLabelDict[key] = {}
+                    self.animatedLabelDict[key]['subType'] = "Boîte de vitesses"
+                    self.animatedLabelDict[key]['PrevState'] = "Off"
+                    self.animatedLabelDict[key]['ImageNumber'] = 0
+                    self.animatedLabelDict[key]['Filepath'] = self.root.imageDict['SpeedBench']
+                    self.animatedLabelDict[key]['Image'] = ImageTk.PhotoImage(imageSpeed)
+                    self.animatedLabelDict[key]['Label'] = tk.Label(self.centerFrame, image=self.animatedLabelDict[key]['Image'])
+                    self.animatedLabelDict[key]['Row'] = rowCount
+                    self.animatedLabelDict[key]['Rowspan'] = 1
+                    self.animatedLabelDict[key]['Label'].grid(column= 4, row= self.animatedLabelDict[key]['Row'], rowspan= self.animatedLabelDict[key]['Rowspan'], sticky= 'w')
+                if 'Pression' in key:
+                    self.pressureButton = tk.Button(self.centerFrame, text= '▼', command= self.LowerPressure)
+                    self.pressureButton.config(width = 6, height = 3, bg= 'lightgrey', activebackground= self.root.defaultbg)
+                    self.pressureButton.grid(column= 5, row= rowCount)
+                #FIN AJOUT
+                rowCount += 1
+            for category in self.robotAttributes['Actuators']:
+                for subCategory in self.robotAttributes['Actuators'][category]:
+                    subType = subCategory.rstrip(' +-')
+                    if subType in key:
+                        if self.root.interface.actuatorClass[category][subCategory].GetOverrideData() != None:
+                            column, text = self.root.interface.actuatorClass[category][subCategory].GetOverrideData()
+                            try:
+                                sensor = self.robotAttributes['Sensors']['Position'][subCategory.rstrip('+-') + '1']
+                                if sensor['ActuatorType'] == 'S-Cam':
+                                    sCat= category
+                                    sSubCat = subCategory
+                                    self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= lambda : self.root.interface.actuatorClass[sCat][sSubCat].Set(actuatorType= 'S-Cam'))
+                                else:
+                                    self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= self.root.interface.actuatorClass[category][subCategory].Set)
+                            except:
+                                self.actuatorButtonDict[category + ' ' + subCategory] = tk.Button(self.centerFrame, text= text, command= self.root.interface.actuatorClass[category][subCategory].Set)
+                            self.actuatorButtonDict[category + ' ' + subCategory].config(width = 6, height = 3, bg= 'lightgrey')
+                            self.actuatorButtonDict[category + ' ' + subCategory].grid(column= column, row = rowActuator, rowspan= len(self.sensorLabelDict[key]))
 
+                        try:
+                            imageActuator = Image.open(self.root.imageDict[category][0])
+                            self.animatedLabelDict[category + ' ' + subType] = {}
+                            self.animatedLabelDict[category + ' ' + subType]['subType'] = subType
+                            self.animatedLabelDict[category + ' ' + subType]['ImageNumber'] = None
+                            self.animatedLabelDict[category + ' ' + subType]['Filepath'] = self.root.imageDict[category]
+                            self.animatedLabelDict[category + ' ' + subType]['Image'] = ImageTk.PhotoImage(imageActuator)
+                            self.animatedLabelDict[category + ' ' + subType]['Label'] = tk.Label(self.centerFrame, image=self.animatedLabelDict[category + ' ' + subType]['Image'])
+                            self.animatedLabelDict[category + ' ' + subType]['Row'] = rowActuator
+                            self.animatedLabelDict[category + ' ' + subType]['Rowspan'] = len(self.sensorLabelDict[key])
+                            self.animatedLabelDict[category + ' ' + subType]['Label'].grid(column= 4, row= self.animatedLabelDict[category + ' ' + subType]['Row'], rowspan= self.animatedLabelDict[category + ' ' + subType]['Rowspan'], sticky= 'w')
+                        except:
+                            None
 
-        # Destruction des anciens bouttons jusqu'au neutre
-        while len(self.shifterButtonList) != 1:
-            button = self.shifterButtonList[-1]
-            button.destroy()
-            self.shifterButtonList.pop()
+        # Rafraichissement des valeurs min max capteurs
+        for category in self.robotAttributes['Sensors']:
+            for subCategory in self.robotAttributes['Sensors'][category]:
+                sensor = self.robotAttributes['Sensors'][category][subCategory]
+                self.sensorMinMaxDict[category + ' ' + subCategory] = (sensor['Min'], sensor['Max'])
 
-        # Création du nombre de boutons nécessaires
-        for i in range(self.robotAttributes['Gears']):
-            gear = i
-            if gear == 0:
-                button = tk.Button(self.shifterFrame, text= 'N', command= partial(self.SelectGear, 0))
-                if self.robotAttributes['Gears'] < 4:
-                    button.grid(row= 2, column= 1)
-                elif self.robotAttributes['Gears'] < 6:
-                    button.grid(row= 2, column= 1, columnspan= 2)
-                else:
-                    button.grid(row= 2, column= 2)
-            else:
-                button = tk.Button(self.shifterFrame, text= gear, command= partial(self.SelectGear, gear))
-                if gear%2 == 1:
-                    button.grid(row= 1, column= (gear+1)//2)
-                if gear%2 == 0:
-                    button.grid(row= 3, column= (gear+1)//2)
-            button.config(font = self.shifterButtonFont, width= self.shifterButtonWidth, height= self.shifterButtonHeight)
-            self.shifterButtonList.append(button)
+        #Remise à zéro du moteur
+        self.motorState = False
+        self.root.interface.SetMotor(self.motorState)
 
-        # Coloration des boutons de sélection du rapport
-        for i in range(len(self.shifterButtonList)):
-            button = self.shifterButtonList[i]
-            if (i-1) == self.selectedGear:
-                button.config(bg= 'green')
-            else:
-                button.config(bg= 'lightgrey')
+    def SetAnimationPos(self, label, pos, key):
+        key = key.rstrip(" 0123456789")
+        pos = pos * label['Filepath']['Nominale']
+        pos = trunc(pos)
+        if label['ImageNumber'] != None:
+            if label['ImageNumber'] == pos:
+                return
+            elif label['ImageNumber'] > 10 and pos > 10:
+                return
+            elif label['ImageNumber'] < 0 and pos < 0:
+                return
+        label['ImageNumber'] = pos
+        if pos > 10:
+            imageActuator = Image.open(label['Filepath']["ErrHigh"])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'red')
+        elif pos < 0:
+            imageActuator = Image.open(label['Filepath']["ErrLow"])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'red')
+        else:
+            imageActuator = Image.open(label['Filepath'][pos])
+            for labelSensor in self.sensorLabelDict[key]:
+                labelSensor[1].config(fg = 'black')
+        label['Image'] = ImageTk.PhotoImage(imageActuator)
+        label['Label'].config(image= label['Image'], bg= self.root.defaultbg)
+        label['Label'].grid(column= 4, row= label['Row'], rowspan= label['Rowspan'], sticky= 'w')
 
 
     def SensorRefresh(self):
+
+        # Vérification que le menu de diagnostique manuel est en cours d'utilisation
         if self.root.activeFrame == self.masterFrame:
+            # L'ensemble est enclavé dans un try / except car il peut y avoir des erreurs non fatales qui stoppent l'affichage des animations (à enlever pour débugger)
             try:
-                for key in self.sensorRobotLabelListVarDict:
-                    for subKey in self.sensorRobotLabelListVarDict[key]:
-                        self.sensorRobotLabelListVarDict[key][subKey].set(self.root.interface.sensorValue[key + ' ' + subKey])
+                # Mise à jour des labels avec les valeurs capteur avec les valeurs de sensorValue qui sont mises à jour grâce au thread de RaspberryInterface
+                for key in self.sensorLabelVarDict:
+                    self.sensorLabelVarDict[key].set(self.root.interface.sensorValue[key])
+
+                # Rafraichissement des labels animés et coloration en rouge des valeurs capteurs si besoin
+                for key in self.animatedLabelDict:
+                    sensorType = self.animatedLabelDict[key]['subType']
+                    for key2 in self.sensorLabelVarDict:
+                        if sensorType in key2:
+                            value = float(self.sensorLabelVarDict[key2].get())
+                            break
+                    minValue, maxValue = self.sensorMinMaxDict[key2]
+                    minValue = float(minValue)
+                    maxValue = float(maxValue)
+                    if 'Vitesse' in key:
+                        if self.motorState:
+                            self.animatedLabelDict[key]['ImageNumber'] +=1
+                            if self.animatedLabelDict[key]['ImageNumber'] == 4:
+                                self.animatedLabelDict[key]['ImageNumber'] = 0
+                            if value < maxValue - 10:
+                                imageSpeed = Image.open(self.animatedLabelDict[key]['Filepath']["TooFar"][self.animatedLabelDict[key]['ImageNumber']])
+                                self.sensorLabelDict[key2][0][1].config(fg= 'red')
+                                self.animatedLabelDict[key]['PrevState'] = "TooFar"
+                            elif value > maxValue + 10:
+                                imageSpeed = Image.open(self.animatedLabelDict[key]['Filepath']["TooClose"][self.animatedLabelDict[key]['ImageNumber']])
+                                self.sensorLabelDict[key2][0][1].config(fg= 'red')
+                                self.animatedLabelDict[key]['PrevState'] = "TooClose"
+                            else:
+                                imageSpeed = Image.open(self.animatedLabelDict[key]['Filepath']["Nominal"][self.animatedLabelDict[key]['ImageNumber']])
+                                self.sensorLabelDict[key2][0][1].config(fg= 'black')
+                            self.animatedLabelDict[key]['PrevState'] = "Nominal"
+                            self.animatedLabelDict[key]['Image'] = ImageTk.PhotoImage(imageSpeed)
+                            self.animatedLabelDict[key]['Label'].config(image= self.animatedLabelDict[key]['Image'], bg= self.root.defaultbg)
+                            self.animatedLabelDict[key]['Label'].grid(column= 4, row= self.animatedLabelDict[key]['Row'], rowspan= self.animatedLabelDict[key]['Rowspan'], sticky= 'w')
+                        elif self.animatedLabelDict[key]['PrevState'] != "Off":
+                            imageSpeed = Image.open(self.animatedLabelDict[key]['Filepath']["Off"])
+                            self.sensorLabelDict[key2][0][1].config(fg= 'black')
+                            self.animatedLabelDict[key]['Image'] = ImageTk.PhotoImage(imageSpeed)
+                            self.animatedLabelDict[key]['Label'].config(image= self.animatedLabelDict[key]['Image'], bg= self.root.defaultbg)
+                            self.animatedLabelDict[key]['Label'].grid(column= 4, row= self.animatedLabelDict[key]['Row'], rowspan= self.animatedLabelDict[key]['Rowspan'], sticky= 'w')
+                            self.animatedLabelDict[key]['PrevState'] = "Off"
+                    else:
+                        if (maxValue - minValue) == 0:
+                            normValue = 0
+                        else:
+                            normValue = (value - minValue)/(maxValue - minValue)
+                        self.SetAnimationPos(self.animatedLabelDict[key], normValue, key2)
+
+
+
+                # Actualisation de la couleur des boutons (vert activé, gris désactivé)
+                for category in self.robotAttributes['Actuators']:
+                    for subCategory in self.robotAttributes['Actuators'][category]:
+                        if self.root.interface.actuatorClass[category][subCategory].position == 1:
+                            self.actuatorButtonDict[category + ' ' + subCategory].config(bg= 'green', activebackground= 'lightgreen')
+                        else:
+                            self.actuatorButtonDict[category + ' ' + subCategory].config(bg= 'lightgrey', activebackground= self.root.defaultbg)
             except:
                 None
+
+
+    def SetMotor(self):
+        if self.motorState:
+            self.motorState = False
+            self.motorButton.config(bg= 'lightgrey', activebackground= self.root.defaultbg, text= '▶')
+        else:
+            self.motorState = True
+            self.motorButton.config(bg= 'green', activebackground= 'lightgreen', text= '❚❚')
+        self.root.interface.SetMotor(self.motorState)
+
+    def LowerPressure(self):
+        self.pressureButton.config(bg= 'green', activebackground= 'lightgreen', state= 'disabled')
+        self.root.update()
+        LowerPressure(self, True)
+        self.pressureButton.config(bg= 'lightgrey', activebackground= self.root.defaultbg, state= 'normal')

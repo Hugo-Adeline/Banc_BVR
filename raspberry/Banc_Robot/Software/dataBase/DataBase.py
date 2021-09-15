@@ -28,28 +28,34 @@ class DataBase():
             df = pd.DataFrame([[{'Name': "Exemple",
                                  'Gears': 6,
                                  'Type': 'Hydraulique',
-                                 'Sensors': {'Position': {'Sélection 1': {'Min': 1.56,
-                                                                          'Max': 3.3,
+                                 'Margin': 5,
+                                 'Sensors': {'Position': {'Sélection 1': {'Min': 0,
+                                                                          'Max': 5,
+                                                                          'MarginScaling': 1,
                                                                           'Deviation': 0,
                                                                           'DeviationErr': 0,
                                                                           'ActuatorType': 'Toggle'},
-                                                          'Engagement 1': {'Min': 0.82,
-                                                                           'Max': 3.3,
+                                                          'Engagement 1': {'Min': 0,
+                                                                           'Max': 5,
+                                                                           'MarginScaling': 1,
                                                                            'Deviation': 0,
                                                                            'DeviationErr': 0,
                                                                            'ActuatorType': 'Linéaire'},
-                                                          'Embrayage 1': {'Min': 1.14,
-                                                                          'Max': 3.3,
+                                                          'Embrayage 1': {'Min': 0,
+                                                                          'Max': 5,
+                                                                          'MarginScaling': 1,
                                                                           'Deviation': 0,
                                                                           'DeviationErr': 0,
                                                                           'ActuatorType': 'Bouton'}},
                                              'Pression': {'Robot': {'Min': 0.5,
                                                                     'Max': 2.5,
+                                                                    'MarginScaling': 0.5,
                                                                     'Deviation': 0,
                                                                     'DeviationErr': 0,
                                                                     'ActuatorType': 'Pompe'}},
-                                             'Vitesse': {'Boîte de vitesses': {'Min': 0.5,
-                                                                               'Max': 2.5,
+                                             'Vitesse': {'Boîte de vitesses': {'Min': 0,
+                                                                               'Max': 100,
+                                                                               'MarginScaling': 100,
                                                                                'Deviation': 0,
                                                                                'DeviationErr': 0,
                                                                                'ActuatorType': None}}},
@@ -63,7 +69,7 @@ class DataBase():
             df.to_csv(self.path, index= False)
             self.Backup()
 
-    def AddRobot(self, name, gears, Type, sensors, actuators):
+    def AddRobot(self, name, gears, Type, margin, sensors, actuators):
         """
         Ajoute un robot à la base de données.
 
@@ -102,6 +108,7 @@ class DataBase():
         df = pd.DataFrame([[{'Name': name,
                              'Gears': gears,
                              'Type': Type,
+                             'Margin': margin,
                              'Sensors': sensors,
                              'Actuators': actuators}]],
                           columns= self.header)
@@ -204,7 +211,7 @@ class DataBase():
         return robotNameList
 
 
-    def ModifyRobot(self, oldName, name, gears, Type, sensors, actuators):
+    def ModifyRobot(self, oldName, name, gears, Type, margin, sensors, actuators):
         """
         Modifie l'entrée de la base de donnée avec les nouvelles données spécifées.
 
@@ -243,6 +250,7 @@ class DataBase():
         df = pd.DataFrame([[{'Name': name,
                              'Gears': gears,
                              'Type': Type,
+                             'Margin': margin,
                              'Sensors': sensors,
                              'Actuators': actuators}]],
                           columns= self.header)
